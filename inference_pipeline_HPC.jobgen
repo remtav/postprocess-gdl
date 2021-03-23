@@ -1,0 +1,50 @@
+#! /bin/bash
+#
+# inference_template.jgen
+#
+#JGEN -r name=inference_template.jgen
+#JGEN -r project=nrcan_geobase
+#JGEN -r joinouterr=y
+#JGEN -r outpath=inference_template.jgen.out
+#JGEN -c nslots=1
+#JGEN -c ncores=8
+#JGEN -c memory=128000M
+#JGEN -c tmpfs=2000M
+#JGEN -c image=nrc/nrc_all_default_ubuntu-18.04-amd64_latest
+#JGEN -r queue=gpu-v100
+#JGEN -c ngpus=1
+#JGEN -r wallclock=21600
+
+# SET ENVIRONMENT VARIABLES
+export PYTHONPATH=/space/partner/nrcan/geobase/work/opt/miniconda3
+export PATH=/usr/local/cuda-10.0/bin:$PATH
+export MKL_THREADING_LAYER=GNU
+source /space/partner/nrcan/geobase/work/opt/miniconda3/bin/activate
+# Activate geo-deep-learning conda environment
+conda activate /gpfs/fs3/nrcan/nrcan_geobase/work/envs/gdl_py38
+
+# EXECUTION STEPS
+# Move into this directory (cd)
+cd /home/remi/PycharmProjects/geo-deep-learning
+
+# Run inference with desired yaml
+
+# ***INSCRIRE LE CHEMIN VERS LE MODÈLE ET IMAGES
+python inference.py -i 'path/to/checkpoint.pth.tar' 'path/to/images-directory/'
+# pour le benchmark, utiliser plutôt un yaml
+# python inference.py -p 'path/to/config.yaml'
+
+# activate post-processing conda environment.
+conda deactivate
+conda activate qgis316
+
+# Run post-process.py with directory containing inferences as argument (must contain file ending with '_inference.tif'!)
+
+# ***INSCRIRE LE CHEMIN VERS LE MODÈLE
+python post-process.py -i 'path/to/checkpoint.pth.tar'
+conda deactivate
+
+
+# interactive mode
+# . ssmuse-sh -x main/opt/jobsubi/jobsubi-0.4
+# jobsubi --show-request -R queue=gpu-v100 -R project=nrcan_geobase -r memory=128G -r ncores=8 -r gputype=v100 -r ngpus=1 -r nslots=1 -r w=60 -r wallclock=21600 gpsc3
