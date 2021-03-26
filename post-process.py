@@ -5,7 +5,7 @@ from pathlib import Path
 
 from joblib import Parallel, delayed
 
-from utils import read_parameters, get_key_def
+from utils import read_parameters, get_key_def, load_checkpoint
 
 
 def subprocess_command(command: str):
@@ -22,33 +22,37 @@ def main(img_path, params):
 
     # post-processing parameters
     # FIXME: as yaml input
-    classes = [(1, 'forest'), (2, 'hydro'), (3, 'roads'), (4, 'buildings')]
-    cell_size_resamp = 0
-    orthogonalize_ang_thresh = 20
-    to_cog = False
-    keep_non_cog = True
+    classes = get_key_def('classes', params['global'], expected_type=dict)
+    r2v_cellsize_resamp = get_key_def('r2vect_cellsize_resamp', params['post-processing'], default=0, expected_type=int)
+    orthog_ang_thres = get_key_def('orthogonalize_ang_thresh', params['post-processing'], default=20, expected_type=int)
+    to_cog = get_key_def('to_cog', params['post-processing'], default=True, expected_type=bool)
+    keep_non_cog = get_key_def('keep_non_cog', params['post-processing'], default=True, expected_type=bool)
+
+    # validate inputted classes
+    if 0 in classes.keys():
+        warnings.warn("Are you sure value 0 is of interest? It is usually used to set background class, "
+                      "i.e. non-relevant class. Will add 1 to all class values inputted, e.g. 0,1,2,3 --> 1,2,3,4")
+        classes = {cl_val + 1: name for cl_val, name in classes}
 
     # set name of output gpkg: myinference.tif will become myinference.gpkg
     final_gpkg = Path(img_path).parent / f'{Path(img_path).stem}.gpkg'
     if final_gpkg.is_file():
         warnings.warn(f'Output geopackage exists: {final_gpkg}. Skipping to next inference...')
     else:
-        if (len(classes)) != 4:
-            raise NotImplementedError
-        command = f'qgis_process run model:gdl-{len(classes)}classes -- ' \
-                  f'srcinfraster="{img_path}" ' \
-                  f'r2vcellsizeresamp={cell_size_resamp} ' \
-                  f'native:package_1:dest-gpkg={final_gpkg} '
+        if len(classes.keys()) == 1 and classes[1] == 'roads':
+            command = f'qgis_process run model:gdl-roads -- ' \
+                      f'inputraster="{img_path}" ' \
+                      f'r2vcellsizeresamp={r2v_cellsize_resamp} ' \
+                      f'native:package_1:dest-gpkg={final_gpkg}'
+        elif len(classes) == 4:
+            command = f'qgis_process run model:gdl-{len(classes)}classes -- ' \
+                      f'srcinfraster="{img_path}" ' \
+                      f'r2vcellsizeresamp={r2v_cellsize_resamp} ' \
+                      f'native:package_1:dest-gpkg={final_gpkg}'
+        else:
+            raise NotImplementedError(f'Cannot post-process inference with {len(classes.keys())} classes')
 
-        # for attrnum, class_name in classes:
-        #     if attrnum == 0:
-        #         warnings.warn("Are you sure value 0 is of interest? It is usually used to set background class, "
-        #                       "i.e. non-relevant class")
-        #
-        #     command += f'attnum{attrnum}={attrnum} ' \
-        #                f'class{attrnum}=\'{class_name}\' '
-
-        subprocess_command(command)
+    subprocess_command(command)
 
     # COG
     if to_cog:
@@ -75,25 +79,43 @@ if __name__ == '__main__':
                         help='model_path')
     args = parser.parse_args()
 
-    if args.param:
-        params = read_parameters(args.param_file)
+    if args.param:  # if yaml file is provided as input
+        params = read_parameters(args.param[0])  # read yaml file into ordereddict object
+        model_ckpt = get_key_def('state_dict_path', params['inference'], expected_type=str)
     elif args.input:
-        model = Path(args.input[0])
-
-        params = {'inference': {}}
-        params['inference']['state_dict_path'] = args.input[0]
-
+        model_ckpt = Path(args.input[0])
+        params = {}
+        params['inference']['img_dir_or_csv_file'] = args.input[1]
+        num_bands = get_key_def('num_bands', params['global'], expected_type=int)
     else:
         print('use the help [-h] option for correct usage')
         raise SystemExit
 
-    working_folder = Path(params['inference']['state_dict_path']).parent
-    #num_bands = get_key_def('num_bands', params['global'], expected_type=int)
-    num_bands = 4
+    checkpoint = load_checkpoint(model_ckpt)
+    if 'params' not in checkpoint.keys():
+        raise KeyError('No parameters found in checkpoint. Use GDL version 1.3 or more.')
+    else:
+        ckpt_num_bands = checkpoint['params']['global']['number_of_bands']
+        num_bands = get_key_def('number_of_bands', params['global'], expected_type=int)
+        if not num_bands == ckpt_num_bands:
+            raise ValueError(f'Got number_of_bands {num_bands}. Expected {ckpt_num_bands}')
+        num_classes = get_key_def('num_classes', params['global'])
+        ckpt_num_classes = checkpoint['params']['global']['num_classes']
+        classes = get_key_def('classes', params['global'], expected_type=dict)
+        if not num_classes == ckpt_num_classes == len(classes.keys()):
+            raise ValueError(f'Got num_classes {num_classes}. Expected {ckpt_num_classes}')
+
+    del checkpoint
+
+    state_dict_path = get_key_def('state_dict_path', params['inference'])
+    working_folder = Path(state_dict_path).parent
     glob_pattern = f"inference_{num_bands}bands/*_inference.tif"
     globbed_imgs_paths = list(working_folder.glob(glob_pattern))
 
-    print(f"Found {len(globbed_imgs_paths)} inferences to post-process")
+    if not globbed_imgs_paths:
+        raise FileNotFoundError(f'No tif images found to post-process in {working_folder}')
+    else:
+        print(f"Found {len(globbed_imgs_paths)} inferences to post-process")
 
     Parallel(n_jobs=len(globbed_imgs_paths))(delayed(main)(file, params=params) for file in globbed_imgs_paths)
     #main(params)

@@ -1,0 +1,33 @@
+# Deep learning configuration file ------------------------------------------------
+# This config is to use massachusetts_buildings image out of the box WITH ONLY MANDATORY PARAMETERS.
+# For that, unzip the file data/massachusetts_buildings.zip before running images_to_samples.py or other command.
+# Five sections :
+#   1) Global parameters; those are re-used amongst the next three operations (sampling, training and inference)
+#   2) Inference parameters
+#   3) Post-processing parameters
+
+# Global parameters
+global:
+  task: 'segmentation'
+  num_classes: 4
+  number_of_bands: 4
+  # Set to True if the first three channels of imagery are blue, green, red. Set to False if Red, Green, Blue
+  BGR_to_RGB: True
+  classes:
+    1: 'forests'
+    2: 'hydro'
+    3: 'roads'
+    4: 'buildings'
+
+# Inference parameters; used in inference.py --------
+inference:
+  img_dir_or_csv_file: /home/remi/Documents/inferences/test_13/cayouche_RGBN_test13_unet
+  # /path/to/model/weights/for/inference/checkpoint.pth.tar
+  state_dict_path: /home/remi/Documents/inferences/test_13/cayouche_RGBN_test13_unet/checkpoint_params.pth.tar
+
+# Post-processing parameters; used in post-process.py
+post-processing:
+  r2vect_cellsize_resamp: 0
+  orthogonalize_ang_thresh: 20
+  to_cog: True
+  keep_non_cog: True

@@ -1,3 +1,4 @@
+import torch
 from ruamel_yaml import YAML
 
 
@@ -47,3 +48,22 @@ def get_key_def(key, config, default=None, msg=None, delete=False, expected_type
             if delete:
                 del config[key]
     return val
+
+
+def load_checkpoint(filename):
+    ''' Loads checkpoint from provided path
+    :param filename: path to checkpoint as .pth.tar or .pth
+    :return: (dict) checkpoint ready to be loaded into model instance
+    '''
+    try:
+        print(f"=> loading model '{filename}'\n")
+        # For loading external models with different structure in state dict.
+        checkpoint = torch.load(filename, map_location='cpu')
+        if 'model' not in checkpoint.keys():
+            # Place entire state_dict inside 'model' key
+            temp_checkpoint = {'model': {k: v for k, v in checkpoint.items()}}
+            del checkpoint
+            checkpoint = temp_checkpoint
+        return checkpoint
+    except FileNotFoundError:
+        raise FileNotFoundError(f"=> No model found at '{filename}'")
