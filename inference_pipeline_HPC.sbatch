@@ -1,8 +1,8 @@
 #! /bin/bash -l
 #
-#SBATCH --job-name=inference_pipeline_HPC.jgen
+#SBATCH --job-name=inference_pipeline_HPC.sbatch
 #SBATCH --open-mode=append
-#SBATCH --output=inference_template.jgen.out
+#SBATCH --output=inference_pipeline_HPC.out
 #SBATCH --no-requeue
 #SBATCH --export=USER,LOGNAME,HOME,MAIL,PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin,JOBGEN_JOINOUTERR=true,JOBGEN_NAME=inference_pipeline_HPC.jgen,JOBGEN_NSLOTS=1,JOBGEN_OUTPATH=inference_template.jgen.out,JOBGEN_PROJECT=nrcan_geobase,JOBGEN_QUEUE=gpu-v100,JOBGEN_SHELL=/bin/bash,JOBGEN_SLOT_IMAGE=nrcan/nrcan_all_default_ubuntu-18.04-amd64_latest,JOBGEN_SLOT_MEMORY=128G,JOBGEN_SLOT_NCORES=8,JOBGEN_SLOT_TMPFS=10G,JOBGEN_WALLCLOCK=6:00:00
 #SBATCH --partition=gpu-v100
@@ -12,14 +12,14 @@
 #SBATCH --mem-per-cpu=16384M
 #SBATCH --comment="image=nrcan/nrcan_all_default_ubuntu-18.04-amd64_latest,ssh=true,nsswitch=true"
 #SBATCH --gpus-per-task=1
-#
-# ---- jobgen -- end
 
 # USER VARIABLES
-# documentation sur les modèles à venir
-yaml = "post-processing.yaml"
+yaml=path/to/config.yaml
 
 # SET ENVIRONMENT VARIABLES (DO NOT TOUCH)
+# load cuda 11.2
+. ssmuse-sh -d /fs/ssm/hpco/exp/cuda-11.2.0
+export LD_LIBRARY_PATH=/fs/ssm/hpco/exp/cuda-11.2.0/cuda_11.2.0_all/lib64
 export PYTHONPATH=/space/partner/nrcan/geobase/work/opt/miniconda3
 export PATH=/usr/local/cuda-10.0/bin:$PATH
 export MKL_THREADING_LAYER=GNU
@@ -28,21 +28,17 @@ source /space/partner/nrcan/geobase/work/opt/miniconda3/bin/activate
 conda activate /gpfs/fs3/nrcan/nrcan_geobase/work/envs/gdl_py38
 
 # EXECUTION STEPS
-# Move into this directory (cd)
-cd /home/remi/PycharmProjects/geo-deep-learning
-
 # Run inference with desired yaml
+cd /gpfs/fs3/nrcan/nrcan_geobase/work/transfer/work/deep_learning/inference/geo-deep-learning
 python inference.py -p $yaml
-#-i $model $input_directory
-# pour le benchmark, utiliser plutôt un yaml
-# python inference.py -p 'path/to/config.yaml'
 
 # activate post-processing conda environment.
 conda deactivate
 conda activate qgis316
 
 # Run post-process.py with directory containing inferences as argument (must contain file ending with '_inference.tif'!)
-python post-process.py -i $model --$classes --reducebendtol=3
+cd /gpfs/fs3/nrcan/nrcan_geobase/work/transfer/work/deep_learning/inference/
+python post-process.py -p $yaml
 conda deactivate
 
 # interactive mode

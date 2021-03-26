@@ -52,7 +52,7 @@ def main(img_path, params):
         else:
             raise NotImplementedError(f'Cannot post-process inference with {len(classes.keys())} classes')
 
-    subprocess_command(command)
+        subprocess_command(command)
 
     # COG
     if to_cog:
