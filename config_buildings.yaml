@@ -13,7 +13,7 @@ global:
   # Set to True if the first three channels of imagery are blue, green, red. Set to False if Red, Green, Blue
   BGR_to_RGB: True
   classes:
-    1: 'roads'
+    1: 'buildings'
 
 # Inference parameters; used in inference.py --------
 inference:

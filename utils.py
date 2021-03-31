@@ -1,3 +1,6 @@
+import warnings
+from typing import List
+
 import torch
 from ruamel_yaml import YAML
 
@@ -57,7 +60,7 @@ def load_checkpoint(filename):
     '''
     try:
         print(f"=> loading model '{filename}'\n")
-        # For loading external models with different structure in state dict.
+        # For loading external qgis_models with different structure in state dict.
         checkpoint = torch.load(filename, map_location='cpu')
         if 'model' not in checkpoint.keys():
             # Place entire state_dict inside 'model' key
@@ -67,3 +70,46 @@ def load_checkpoint(filename):
         return checkpoint
     except FileNotFoundError:
         raise FileNotFoundError(f"=> No model found at '{filename}'")
+
+
+def compare_config_yamls(yaml1: dict, yaml2: dict, update_yaml1: bool = False) -> List:
+    """
+    Checks if values for same keys or subkeys (max depth of 2) of two dictionaries match.
+    :param yaml1: (dict) first dict to evaluate
+    :param yaml2: (dict) second dict to evaluate
+    :param update_yaml1: (bool) it True, values in yaml1 will be replaced with values in yaml2,
+                         if the latters are different
+    :return: dictionary of keys or subkeys for which there is a value mismatch if there is, or else returns None
+    """
+    if not (isinstance(yaml1, dict) or isinstance(yaml2, dict)):
+        raise TypeError(f"Expected both yamls to be dictionaries. \n"
+                        f"Yaml1's type is  {type(yaml1)}\n"
+                        f"Yaml2's type is  {type(yaml2)}")
+    for section, params in yaml2.items():  # loop through main sections of config yaml ('global', 'sample', etc.)
+        if section not in yaml1.keys():  # create key if not in dictionary as we loop
+            yaml1[section] = {}
+        for param, val2 in params.items():  # loop through parameters of each section ('samples_size','debug_mode',...)
+            if param not in yaml1[section].keys():  # create key if not in dictionary as we loop
+                yaml1[section][param] = {}
+            # set to None if no value for that key
+            val1 = get_key_def(param, yaml1[section], default=None)
+            if isinstance(val2, dict):  # if value is a dict, loop again to fetch end val (only recursive twice)
+                for subparam, subval2 in val2.items():
+                    if subparam not in yaml1[section][param].keys():  # create key if not in dictionary as we loop
+                        yaml1[section][param][subparam] = {}
+                    # set to None if no value for that key
+                    subval1 = get_key_def(subparam, yaml1[section][param], default=None)
+                    if subval2 != subval1:
+                        # if value doesn't match between yamls, emit warning
+                        warnings.warn(f"YAML value mismatch: section \"{section}\", key \"{param}/{subparam}\"\n"
+                                        f"Current yaml value: \"{subval1}\"\nHDF5s yaml value: \"{subval2}\"\n")
+                        if update_yaml1:  # update yaml1 with subvalue of yaml2
+                            yaml1[section][param][subparam] = subval2
+                            warnings.warn(f'Value in yaml1 updated')
+            elif val2 != val1:
+                warnings.warn(f"YAML value mismatch: section \"{section}\", key \"{param}\"\n"
+                                f"Current yaml value: \"{val2}\"\nHDF5s yaml value: \"{val1}\"\n"
+                                f"Problems may occur.")
+                if update_yaml1:  # update yaml1 with value of yaml2
+                    yaml1[section][param] = val2
+                    print(f'Value in yaml1 updated')

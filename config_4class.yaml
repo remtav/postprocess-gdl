@@ -20,9 +20,8 @@ global:
 
 # Inference parameters; used in inference.py --------
 inference:
-  img_dir_or_csv_file: /home/remi/Documents/inferences/test_13/cayouche_RGBN_test13_unet
-  # /path/to/model/weights/for/inference/checkpoint.pth.tar
-  state_dict_path: /home/remi/Documents/inferences/test_13/cayouche_RGBN_test13_unet/checkpoint_params.pth.tar
+  img_dir_or_csv_file: #/path/to/img_dir_or_csv_file
+  state_dict_path: # /path/to/model/weights/for/inference/checkpoint.pth.tar
 
 # Post-processing parameters; used in post-process.py
 post-processing:
@@ -36,5 +35,5 @@ post-processing:
     patterntol: 0.75  # if 1, will exclude all buildings that don't fit perfectly under one of the hardcoded patterns
     orthogonalize_ang_thresh: 20  # max angle formed by 3 vertices that will be orthogonalized (to 90° or 180°)
 
-  to_cog: True  # Convert raster inference to cog (will compress with LZW)
-  keep_non_cog: True  # if False, will delete inferences after they are converted to cog (only applies when to_cog=True)
+  to_cog: True  # (bool) Convert raster inference to cog (will compress with LZW)
+  keep_non_cog: False  # (bool) if False, will delete inferences after they are converted to cog (only applies when to_cog=True)

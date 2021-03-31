@@ -14,18 +14,19 @@
 #SBATCH --gpus-per-task=1
 
 # USER VARIABLES
-yaml=path/to/config.yaml
+yaml=absolute/path/to/config.yaml
 
 # SET ENVIRONMENT VARIABLES (DO NOT TOUCH)
 # load cuda 11.2
 . ssmuse-sh -d /fs/ssm/hpco/exp/cuda-11.2.0
 export LD_LIBRARY_PATH=/fs/ssm/hpco/exp/cuda-11.2.0/cuda_11.2.0_all/lib64
-export PYTHONPATH=/space/partner/nrcan/geobase/work/opt/miniconda3
-export PATH=/usr/local/cuda-10.0/bin:$PATH
+#export PATH=/usr/local/cuda-10.0/bin:$PATH
 export MKL_THREADING_LAYER=GNU
+export PYTHONPATH=/space/partner/nrcan/geobase/work/opt/miniconda3
 source /space/partner/nrcan/geobase/work/opt/miniconda3/bin/activate
 # Activate geo-deep-learning conda environment
-conda activate /gpfs/fs3/nrcan/nrcan_geobase/work/envs/gdl_py38
+conda activate gdl39-beta
+#conda activate /gpfs/fs3/nrcan/nrcan_geobase/work/envs/gdl_py38
 
 # EXECUTION STEPS
 # Run inference with desired yaml
@@ -37,7 +38,7 @@ conda deactivate
 conda activate qgis316
 
 # Run post-process.py with directory containing inferences as argument (must contain file ending with '_inference.tif'!)
-cd /gpfs/fs3/nrcan/nrcan_geobase/work/transfer/work/deep_learning/inference/
+cd /gpfs/fs3/nrcan/nrcan_geobase/work/transfer/work/deep_learning/inference/postprocess-gdl
 python post-process.py -p $yaml
 conda deactivate
 
