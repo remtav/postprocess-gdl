@@ -21,10 +21,18 @@ def main(img_path, params):
     print(f'Post-processing {img_path}')
 
     # post-processing parameters
-    # FIXME: as yaml input
     classes = get_key_def('classes', params['global'], expected_type=dict)
+
     r2v_cellsize_resamp = get_key_def('r2vect_cellsize_resamp', params['post-processing'], default=0, expected_type=int)
-    orthog_ang_thres = get_key_def('orthogonalize_ang_thresh', params['post-processing'], default=20, expected_type=int)
+    removeholesunder = get_key_def('removeholesunder', params['post-processing'], default=0, expected_type=int)
+    simptol = get_key_def('simptol', params['post-processing'], default=0, expected_type=int)
+    redbenddiamtol = get_key_def('redbenddiamtol', params['post-processing'], default=0, expected_type=int)
+    recttol = get_key_def('recttol', params['post-processing']['buildings'], default=0, expected_type=int)
+    compacttol = get_key_def('compacttol', params['post-processing']['buildings'], default=0, expected_type=int)
+    patterntol = get_key_def('patterntol', params['post-processing']['buildings'], default=20, expected_type=int)
+    orthogonalize_ang_thresh = get_key_def('orthogonalize_ang_thresh', params['post-processing']['buildings'],
+                                           default=0, expected_type=int)
+
     to_cog = get_key_def('to_cog', params['post-processing'], default=True, expected_type=bool)
     keep_non_cog = get_key_def('keep_non_cog', params['post-processing'], default=True, expected_type=bool)
 
@@ -35,6 +43,7 @@ def main(img_path, params):
         classes = {cl_val + 1: name for cl_val, name in classes}
 
     # set name of output gpkg: myinference.tif will become myinference.gpkg
+    # FIXME: let user set output directory
     final_gpkg = Path(img_path).parent / f'{Path(img_path).stem}.gpkg'
     if final_gpkg.is_file():
         warnings.warn(f'Output geopackage exists: {final_gpkg}. Skipping to next inference...')
@@ -42,6 +51,11 @@ def main(img_path, params):
         if len(classes.keys()) == 1 and classes[1] == 'roads':
             command = f'qgis_process run model:gdl-roads -- ' \
                       f'inputraster="{img_path}" ' \
+                      f'r2vcellsizeresamp={r2v_cellsize_resamp} ' \
+                      f'native:package_1:dest-gpkg={final_gpkg}'
+        elif len(classes.keys()) == 1 and classes[1] == 'buildings':
+            command = f'qgis_process run model:gdl-buildings -- ' \
+                      f'srcinfraster="{img_path}" ' \
                       f'r2vcellsizeresamp={r2v_cellsize_resamp} ' \
                       f'native:package_1:dest-gpkg={final_gpkg}'
         elif len(classes) == 4:
@@ -65,7 +79,12 @@ def main(img_path, params):
                           f'-co COMPRESS=LZW'
             subprocess_command(cog_command)
         if keep_non_cog is False and img_path_cog.is_file():
-            img_path.unlink(missing_ok=True)
+            try:
+                img_path.unlink(missing_ok=True)
+            except TypeError:
+                img_path.unlink()
+            except FileNotFoundError:
+                print(f'Could not delete non cog inference: {keep_non_cog}')
 
 
 if __name__ == '__main__':
@@ -115,8 +134,8 @@ if __name__ == '__main__':
 
     state_dict_path = get_key_def('state_dict_path', params['inference'])
     working_folder = Path(state_dict_path).parent
-    ckpt_num_bands = get_key_def('num_bands', params['global'], expected_type=int)
-    glob_pattern = f"inference_{ckpt_num_bands}bands/*_inference.tif"
+    #ckpt_num_bands = get_key_def('num_bands', params['global'], expected_type=int)
+    #glob_pattern = f"inference_{ckpt_num_bands}bands/*_inference.tif"
     glob_pattern = f"**/*_inference.tif"
     globbed_imgs_paths = list(working_folder.glob(glob_pattern))
 
