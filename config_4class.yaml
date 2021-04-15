@@ -2,9 +2,8 @@
 # This config is to use massachusetts_buildings image out of the box WITH ONLY MANDATORY PARAMETERS.
 # For that, unzip the file data/massachusetts_buildings.zip before running images_to_samples.py or other command.
 # Five sections :
-#   1) Global parameters; those are re-used amongst the next three operations (sampling, training and inference)
+#   1) Global parameters; those are re-used amongst the next three operations
 #   2) Inference parameters
-#   3) Post-processing parameters
 
 # Global parameters
 global:
@@ -22,18 +21,3 @@ global:
 inference:
   img_dir_or_csv_file: #/path/to/img_dir_or_csv_file
   state_dict_path: # /path/to/model/weights/for/inference/checkpoint.pth.tar
-
-# Post-processing parameters; used in post-process.py
-post-processing:
-  r2vect_cellsize_resamp: 0  # (int) Resample raster before vectorization with this amount of pixels. Default:0
-  removeholesunder: 4  # (int) Remove holes under this number in all classes
-  simptol: 0.75  # (float) tolerance for simplification (Douglas-Peucker). Does not apply to 'buildings' (Visvalingam)
-  redbenddiamtol: 3  # (int) tolerance for reduce bend algorithm. Applies to all classes
-  buildings:  # buildings-specific parameters
-    recttol: 0.80  # if 1, will exclude all buildings that are not rectangles
-    compacttol: 0.85  # if 1, will exclude all buildings that are not a circle
-    patterntol: 0.75  # if 1, will exclude all buildings that don't fit perfectly under one of the hardcoded patterns
-    orthogonalize_ang_thresh: 20  # max angle formed by 3 vertices that will be orthogonalized (to 90° or 180°)
-
-  to_cog: True  # (bool) Convert raster inference to cog (will compress with LZW)
-  keep_non_cog: False  # (bool) if False, will delete inferences after they are converted to cog (only applies when to_cog=True)
