@@ -6,6 +6,24 @@ Auteur: Rémi Tavon | Date: 15 avril 2021
 >Répertoire de travail sur HPC pour les inférences:
 `/gpfs/fs3/nrcan/nrcan_geobase/work/transfer/work/deep_learning/inference/`
 
+Voici un aperçu de la structure de ce dossier et des fichiers importants mentionnés dans les étapes ci-dessous:
+```
+├── inference
+    └── models
+        └── sat-imagery-optical-50cm
+            └── 4class.pth.tar
+            └── ...
+        └── sar
+            └── ...
+    └── postprocess-gdl
+            └── config_4class.yaml
+            └── inference_pipieline_HPC.sbatch
+            └── ...
+    └── geo-deep-learning
+            └── ...
+    └── ...
+```
+
 ## Étape 1. Inférence avec geo-deep-learning 
 
 ### 1.1 Lister les images dans un fichier .csv
@@ -88,9 +106,11 @@ Ces paramètres sont utilisés au coeur du script d'inférence.
 
 ### 1.4 Exécuter l'inférence via le fichier `.sbatch`
 
-Avant d'indiquer le lien entre le fichier `.yaml` et `.sbatch`, présentons rapidement la fonction de ce troisième fichier et dernier fichier (1 - `.csv`, 2 - `.yaml`, 3 - `.sbatch`).
+> Le fichier `inference_pipieline_HPC.sbatch` se trouve dans `./postprocess-gdl/`
 
-Le fichier `.sbatch` est utilisé par le gestionnaire de tâche sur HPC pour configurer une machine virtuelle qui servira à effectuer l'inférence. 
+Avant d'indiquer le lien entre le fichier `.yaml` et `.sbatch`, présentons rapidement la fonction de ce troisième et dernier fichier (1 - `.csv`, 2 - `.yaml`, 3 - `.sbatch`).
+
+Le fichier `inference_pipieline_HPC.sbatch` est utilisé par le gestionnaire de tâche sur HPC pour configurer une machine virtuelle qui servira à effectuer l'inférence. 
 Voici quelques notes à propos de son contenu. La première section (qui contient tous les paramètres `#SBATCH`) sert à "créer" une machine temporaire. Toute cette section peut normalement être laissée telle quelle.
 
 ```shell
@@ -130,7 +150,7 @@ Toutes les autres lignes du `.sbatch` (suivant le "DO NOT TOUCH") **ne devraient
 
 ### 1.5 Récupérer les inférences
 
-À mesure qu'elles sont produites par le modèle, les inférences brutes, en format raster, pourront être récupérées dans le dossier qui contient le modèle `.pth.tar` que vous avez spécifié dans le `.yaml`. Par exemple:
+À mesure qu'elles sont produites par le modèle, les inférences brutes, en format matriciel, pourront être récupérées dans le dossier qui contient le modèle `.pth.tar` que vous avez spécifié dans le `.yaml`. Par exemple:
 ```
 ├── inference
     └── models
@@ -157,13 +177,23 @@ Transférer les inférences localement via FileZilla. Voilà qui complète la pr
 - Dans QGIS (v3.14+), sous l'onglet "Extensions", cliquer sur "Installer/Gérer les extensions".
 - Chercher et installer "Geo Simplification (processing)"
 
-Cette extension contient les algorithmes utiles pour la simplification et pour extraire des lignes à partir des polygones de routes. Une version expériementale permet aussi de faire du post-traitement ciblé pour les bâtiments. Voir avec les développeurs pour cet outil (Daniel Pilon!).
+Cette extension contient les algorithmes utiles pour la simplification et pour extraire des lignes à partir des polygones de routes. Une version expériementale permet aussi de faire du post-traitement ciblé pour les bâtiments. Voir avec les développeurs pour cet outil (Daniel Pilon, par exemple!).
 
 ### 2.2 Utiliser le modeleur graphique de QGIS
 
 Les modèles préconstruits pour le post-traitement peuvent être récupérés ìci:
 https://github.com/remtav/postprocess-gdl
 
+Les fichiers de modèles `.model3` qui ont la forme `simplify-[...].model3` permettent la simplification d'une **sortie préalablement vectorisée pour une classe seulement**. Ils sont appelés par les modèles QGIS qui ont la forme `gdl-[...].model3`. Ces derniers sont les modèles indiqués pour effectuer le pipeline de post-traiement complet sur une inférence en format matriciel.
+
 Dans github, il est possible de télécharger ce répertoire comme .zip (Bouton vert "Code" --> "Download ZIP"). Puis, dans QGIS, les fichiers .model3 peuvent être importés (Traitement --> Boîte à outils --> Ajouter un modèle à la boîte à outils)
 
 Avant d'utiliser un modèle pour une première fois, il vaut mieux l'ouvrir ("Traitement" --> "Modeleur graphique") pour s'assurer que les références aux différents algorithmes sont valides. Selon vos préférences, il peut être pertinent d'exposer davantage de paramètres aux utilisateurs.
+
+#### Post-traitement 4 classes
+Ouvrir et exécuter le modèle `./postprocess-gdl/qgis_models/gdl_4classes.model3`.
+Plusieurs paramètres peuvent être ajustés au besoin, mais leurs valeurs par défaut devraient donner de bons résultats pour commencer.
+
+#### Post-traitement - bâtiments seulement
+Ouvrir et exécuter le modèle `./postprocess-gdl/qgis_models/gdl_buildings.model3`.
+Idem ici: ne pas hésiter à jouer avec les valeurs de paramètres.
