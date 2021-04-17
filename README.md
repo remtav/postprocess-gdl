@@ -44,7 +44,7 @@ Exporter sous la forme d'un fichier csv (séparateur: virgule)
 
 > Le .csv peut également être créé de toutes pièces avec un éditeur de texte de votre choix plutôt qu'avec Excel.
 
-Utiliser FileZilla (ou logicial équivalent) pour transférer ce .csv de votre poste vers le répertoire de travail sur HPC (voir chemin ci-dessus).
+Utiliser FileZilla (ou logiciel équivalent) pour transférer ce .csv de votre poste vers le répertoire de travail sur HPC (voir chemin ci-dessus).
 
 ### 1.2 Choisir son modèle
 
@@ -181,7 +181,7 @@ Cette extension contient les algorithmes utiles pour la simplification et pour e
 
 ### 2.2 Utiliser le modeleur graphique de QGIS
 
-Les modèles préconstruits pour le post-traitement peuvent être récupérés ìci:
+Les modèles préconstruits pour le post-traitement peuvent être récupérés ici:
 https://github.com/remtav/postprocess-gdl
 
 Les fichiers de modèles `.model3` qui ont la forme `simplify-[...].model3` permettent la simplification d'une **sortie préalablement vectorisée pour une classe seulement**. Ils sont appelés par les modèles QGIS qui ont la forme `gdl-[...].model3`. Ces derniers sont les modèles indiqués pour effectuer le pipeline de post-traiement complet sur une inférence en format matriciel.
